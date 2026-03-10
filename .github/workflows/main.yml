@@ -3,8 +3,8 @@ name: Calculator Service CI/CD
 on:
   push:
     branches: [ "main" ]
-    paths:
-      - 'calculator-python/**'
+    #paths:
+      #- 'calculator-python/**'
       #- '.github/workflows/main.yml'
 
 jobs:
