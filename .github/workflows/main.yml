@@ -24,38 +24,13 @@ jobs:
           python-version: '3.10'
 
       - name: Install Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install ruff pytest
+        run: ../scripts/green_run.sh "Install_Deps" "pip install -r requirements.txt ruff pytest"
 
       - name: Build (Compile Bytecode)
-        run: python -m compileall app/
+        run: ../scripts/green_run.sh "Compile" "python -m compileall app/"
 
       - name: Static Code Analysis (Ruff)
-        run: ruff check .
+        run: ../scripts/green_run.sh "Linter" "ruff check ."
 
       - name: Unit Tests (Pytest)
-        run: pytest tests/
-
-  docker-push:
-    needs: build-and-test
-    runs-on: self-hosted
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and Push
-        uses: docker/build-push-action@v5
-        with:
-          context: ./calculator-python 
-          push: true
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-calc:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-calc:${{ github.sha }}
+        run: ../scripts/green_run.sh "Pytest" "pytest tests/"
