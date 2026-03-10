@@ -6,7 +6,6 @@ on:
     paths:
       - 'calculator-python/**'  
 
-
 jobs:
   build-and-test:
     runs-on: self-hosted
@@ -29,6 +28,9 @@ jobs:
           pip install -r requirements.txt
           pip install ruff pytest
 
+      - name: Build (Compile Bytecode)
+        run: python -m compileall app/
+
       - name: Static Code Analysis (Ruff)
         run: ruff check .
 
@@ -37,7 +39,7 @@ jobs:
 
   docker-push:
     needs: build-and-test
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -53,4 +55,6 @@ jobs:
         with:
           context: ./calculator-python 
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-calc:latest
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-calc:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-calc:${{ github.sha }}
