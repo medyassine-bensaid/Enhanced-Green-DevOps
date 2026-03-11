@@ -4,10 +4,11 @@ COMMAND=$2
 
 # Identify the root of the monorepo (assuming script is in /scripts)
 REPO_ROOT=$(dirname "$(dirname "$(readlink -f "$0")")")
-METRICS_DIR="$REPO_ROOT/green_metrics"
+METRICS_DIR="$GITHUB_WORKSPACE/green_metrics"
 
 # Ensure the metrics directory exists outside the scripts folder
 mkdir -p "$METRICS_DIR"
+chmod 777 "$METRICS_DIR"
 
 # 1. Start EcoFloc (Points to the absolute metrics path)
 sudo ecofloc --cpu -L "Runner.Worker" -i 1000 -t -1 -f "$METRICS_DIR/${JOB_NAME}_$(date +%s).csv" &
