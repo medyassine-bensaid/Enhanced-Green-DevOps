@@ -71,6 +71,7 @@ jobs:
         with:
           task: display-results
           # Pour voir les résultats sous forme de graphiques dans le dashboard Eco-CI
-          send-data: true 
+          send-data: true
+          branch-name: ${{ github.ref_name }}
           # Crée un fichier de données pour usage ultérieur
           export-json: true
