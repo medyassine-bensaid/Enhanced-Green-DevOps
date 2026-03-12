@@ -95,14 +95,4 @@ jobs:
           json-output: true     
           calculate-co2: false   
           
-      - name: Check if file exists (Debug)
-        run: |
-          echo "Recherche du fichier dans tout le dossier du runner..."
-          find . -name "energy-export.json"
-
-      - name: Upload Energy Report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: energy-report
-          path: "*.json" # Prend n'importe quel JSON généré
+     
