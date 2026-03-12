@@ -220,32 +220,68 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Start Measurement
+      - name: Start Energy Measurement
         uses: green-coding-solutions/eco-ci-energy-estimation@v4
         with:
           task: start-measurement
 
-      - name: Run Container
+      - name: Run Integration Test
+        env:
+          IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/calculator-app:latest
+          CONTAINER_NAME: calc-${{ github.run_id }}-${{ github.run_attempt }}
         run: |
-          docker run -d --name test-app -p 5000:5000 ${{ secrets.DOCKERHUB_USERNAME }}/calculator-app:latest
-          sleep 10
-          curl http://localhost:5000/health
-          docker stop test-app
-          docker rm test-app
+          set -Eeuo pipefail
+
+          PORT=$(shuf -i 20000-65000 -n 1)
+
+          echo "Container name: $CONTAINER_NAME"
+          echo "Port: $PORT"
+
+          cleanup() {
+            echo "Cleaning container..."
+            docker rm -f $CONTAINER_NAME >/dev/null 2>&1 || true
+          }
+
+          trap cleanup EXIT
+
+          echo "Removing possible leftover container"
+          docker rm -f $CONTAINER_NAME >/dev/null 2>&1 || true
+
+          echo "Starting container"
+          docker run -d \
+            --name $CONTAINER_NAME \
+            -p $PORT:5000 \
+            $IMAGE
+
+          echo "Waiting for application startup"
+
+          for i in {1..20}; do
+            if curl -fs http://localhost:$PORT/health > /dev/null; then
+              echo "Healthcheck passed"
+              exit 0
+            fi
+
+            echo "Waiting... attempt $i"
+            sleep 2
+          done
+
+          echo "Healthcheck failed — container logs:"
+          docker logs $CONTAINER_NAME
+
+          exit 1
 
       - name: Integration Metrics
         uses: green-coding-solutions/eco-ci-energy-estimation@v4
         with:
           task: get-measurement
-          label: "Docker Run Healthcheck"
+          label: "Docker Integration Test"
 
 # -----------------------
 # FINAL REPORT
 # -----------------------
   energy-report:
     runs-on: self-hosted
-    needs:
-      - integration-test
+    needs: integration-test
 
     steps:
       - name: Display Results
