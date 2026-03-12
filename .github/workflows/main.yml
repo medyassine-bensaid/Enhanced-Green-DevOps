@@ -84,6 +84,7 @@ jobs:
           label: 'Tests (Pytest)'
 
       - name: Finalize & Display Results
+        if: always()
         uses: green-coding-solutions/eco-ci-energy-estimation@v4
         with:
           task: display-results
@@ -91,8 +92,16 @@ jobs:
           branch-name: ${{ github.ref_name }}
           export-json: true
 
+      - name: Check if file exists (Debug)
+        run: |
+          echo "Recherche du fichier dans tout le dossier du runner..."
+          find . -name "energy-export.json"
+
       - name: Upload Energy Report
         uses: actions/upload-artifact@v4
         with:
-          name: energy-metrics-report
-          path: "**/energy-export.json"
+          name: energy-report-${{ github.run_id }}
+          path: |
+            **/energy-export.json
+            ./energy-export.json
+          if-no-files-found: warn
