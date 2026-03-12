@@ -41,8 +41,7 @@ jobs:
         uses: green-coding-solutions/eco-ci-energy-estimation@v4
         with:
           task: get-measurement
-          label: 'Stress-Test-4-Cores
-
+          label: 'Stress-Test-4-Cores'
           
       - name: Install Dependencies
         run: |
@@ -54,6 +53,8 @@ jobs:
         with:
           task: get-measurement
           label: 'Installation'
+
+      
 
       - name: Build (Compile Bytecode)
         run: python -m compileall app/
