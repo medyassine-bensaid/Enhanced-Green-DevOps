@@ -1,128 +1,258 @@
 name: Calculator Service CI/CD - Energy Optimized
+
 permissions:
   contents: read
-  actions: read  
+  actions: read
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
+defaults:
+  run:
+    working-directory: ./calculator-python
+
 jobs:
-  build-and-test:
+
+# -----------------------
+# ENV SETUP
+# -----------------------
+  setup:
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: ./calculator-python
-        
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Initialize Eco-CI
+      - name: Start Energy Measurement
         uses: green-coding-solutions/eco-ci-energy-estimation@v4
         with:
           task: start-measurement
           geo-location: fr
           carbon-intensity: 0
 
-      - name: Set up Python 3.10
+      - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: "3.10"
 
-      - name: Baseline Measurement
+      - name: Setup Metrics
         uses: green-coding-solutions/eco-ci-energy-estimation@v4
         with:
           task: get-measurement
-          label: 'Setup-Environment'
+          label: "Setup Environment"
+
+# -----------------------
+# INSTALL
+# -----------------------
+  install:
+    runs-on: self-hosted
+    needs: setup
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start Measurement
+        uses: green-coding-solutions/eco-ci-energy-estimation@v4
+        with:
+          task: start-measurement
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
 
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt ruff pytest
-      
-      - name: Get Installation Metrics
+
+      - name: Installation Metrics
         uses: green-coding-solutions/eco-ci-energy-estimation@v4
         with:
           task: get-measurement
-          label: 'Installation'
+          label: "Dependencies Installation"
 
-      - name: Build (Compile Bytecode)
+# -----------------------
+# BUILD
+# -----------------------
+  build:
+    runs-on: self-hosted
+    needs: install
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start Measurement
+        uses: green-coding-solutions/eco-ci-energy-estimation@v4
+        with:
+          task: start-measurement
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Compile Python
         run: python -m compileall app/
 
-      - name: Get Build Metrics
+      - name: Build Metrics
         uses: green-coding-solutions/eco-ci-energy-estimation@v4
         with:
           task: get-measurement
-          label: 'Compile Bytecode'
+          label: "Compile Bytecode"
 
-      - name: Static Code Analysis (Ruff)
+# -----------------------
+# LINT
+# -----------------------
+  lint:
+    runs-on: self-hosted
+    needs: build
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start Measurement
+        uses: green-coding-solutions/eco-ci-energy-estimation@v4
+        with:
+          task: start-measurement
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Ruff Linter
         run: ruff check .
 
-      - name: Get Linting Metrics
+      - name: Lint Metrics
         uses: green-coding-solutions/eco-ci-energy-estimation@v4
         with:
           task: get-measurement
-          label: 'Linter (Ruff)'
+          label: "Ruff Linter"
 
-      - name: Unit Tests (Pytest)
+# -----------------------
+# TEST
+# -----------------------
+  test:
+    runs-on: self-hosted
+    needs: lint
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start Measurement
+        uses: green-coding-solutions/eco-ci-energy-estimation@v4
+        with:
+          task: start-measurement
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Run Tests
         run: pytest tests/
 
-      - name: Get Test Metrics
+      - name: Test Metrics
         uses: green-coding-solutions/eco-ci-energy-estimation@v4
         with:
           task: get-measurement
-          label: 'Tests (Pytest)'
+          label: "Pytest"
 
+# -----------------------
+# DOCKER BUILD
+# -----------------------
+  docker-build:
+    runs-on: self-hosted
+    needs: test
 
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Log in to Docker Hub
+      - name: Start Measurement
+        uses: green-coding-solutions/eco-ci-energy-estimation@v4
+        with:
+          task: start-measurement
+
+      - name: Docker Build
+        run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/calculator-app:latest .
+
+      - name: Docker Build Metrics
+        uses: green-coding-solutions/eco-ci-energy-estimation@v4
+        with:
+          task: get-measurement
+          label: "Docker Build"
+
+# -----------------------
+# DOCKER PUSH
+# -----------------------
+  docker-push:
+    runs-on: self-hosted
+    needs: docker-build
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start Measurement
+        uses: green-coding-solutions/eco-ci-energy-estimation@v4
+        with:
+          task: start-measurement
+
+      - name: Docker Login
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Docker Build
-        run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/calculator-app:latest .
-
-      - name: Get Docker Build Metrics
-        uses: green-coding-solutions/eco-ci-energy-estimation@v4
-        with:
-          task: get-measurement
-          label: 'Docker Build'
-
       - name: Docker Push
         run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/calculator-app:latest
 
-      - name: Get Docker Push Metrics
+      - name: Docker Push Metrics
         uses: green-coding-solutions/eco-ci-energy-estimation@v4
         with:
           task: get-measurement
-          label: 'Docker Push'
+          label: "Docker Push"
 
-      - name: Docker Run (Integration Check)
+# -----------------------
+# INTEGRATION TEST
+# -----------------------
+  integration-test:
+    runs-on: self-hosted
+    needs: docker-push
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start Measurement
+        uses: green-coding-solutions/eco-ci-energy-estimation@v4
+        with:
+          task: start-measurement
+
+      - name: Run Container
         run: |
           docker run -d --name test-app -p 5000:5000 ${{ secrets.DOCKERHUB_USERNAME }}/calculator-app:latest
           sleep 10
-          curl http://localhost:5000/health || exit 1
-          docker stop test-app && docker rm test-app
+          curl http://localhost:5000/health
+          docker stop test-app
+          docker rm test-app
 
-      - name: Get Docker Run Metrics
+      - name: Integration Metrics
         uses: green-coding-solutions/eco-ci-energy-estimation@v4
         with:
           task: get-measurement
-          label: 'Docker Run & Healthcheck'
+          label: "Docker Run Healthcheck"
 
-          
-      - name: Finalize & Display Results
-        if: always()
+# -----------------------
+# FINAL REPORT
+# -----------------------
+  energy-report:
+    runs-on: self-hosted
+    needs:
+      - integration-test
+
+    steps:
+      - name: Display Results
         uses: green-coding-solutions/eco-ci-energy-estimation@v4
         with:
           task: display-results
           send-data: true
-          branch: main 
-          json-output: true 
-          calculate-co2: false 
-     
+          branch: main
+          json-output: true
+          calculate-co2: false
