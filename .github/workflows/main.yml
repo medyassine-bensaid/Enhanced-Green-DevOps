@@ -32,34 +32,27 @@ jobs:
         with:
           python-version: '3.10'
 
+      # On "nettoie" le compteur ici pour que Setup Python ne pollue pas l'Installation
+      - name: Baseline Measurement
+        uses: green-coding-solutions/eco-ci-energy-estimation@v4
+        with:
+          task: get-measurement
+          label: 'Setup-Environment'
 
-      #- name: Stress Test
-        #run: |
-         # chmod +x ../../stress-tests/stress_workload.sh
-         # bash ../../stress-tests/stress_workload.sh
-
-     # - name: Get Stress Metrics
-     #   uses: green-coding-solutions/eco-ci-energy-estimation@v4
-     #   with:
-      #    task: get-measurement
-       #   label: 'Stress-Test-4-Cores'
-          
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt ruff pytest
-
+      
       - name: Get Installation Metrics
         uses: green-coding-solutions/eco-ci-energy-estimation@v4
         with:
           task: get-measurement
           label: 'Installation'
 
-      
-
       - name: Build (Compile Bytecode)
         run: python -m compileall app/
-          
+
       - name: Get Build Metrics
         uses: green-coding-solutions/eco-ci-energy-estimation@v4
         with:
@@ -90,9 +83,7 @@ jobs:
         with:
           task: display-results
           send-data: true
-    
-          branch: ${{ github.ref_name }}
-          json-output: true     
-          calculate-co2: false   
-          
+          branch: main # Bien aligné sous "with"
+          json-output: true # Bien aligné sous "with"
+          calculate-co2: false # Bien aligné sous "with"
      
