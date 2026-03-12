@@ -216,6 +216,7 @@ jobs:
   integration-test:
     runs-on: self-hosted
     needs: docker-push
+    environment: manual-testing
 
     steps:
       - uses: actions/checkout@v4
@@ -256,7 +257,7 @@ jobs:
           echo "Waiting for application startup"
 
           for i in {1..20}; do
-            if curl -fs http://localhost:$PORT/health > /dev/null; then
+            if curl -fs http://localhost:$PORT/calculate > /dev/null; then
               echo "Healthcheck passed"
               exit 0
             fi
