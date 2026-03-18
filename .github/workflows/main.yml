@@ -11,7 +11,7 @@ on:
 
 defaults:
   run:
-    working-directory: ./calculator-python
+    working-directory: ./chatbot
 
 jobs:
 
