@@ -59,3 +59,7 @@ def chat(question: Question):
 @app.get("/metrics")
 def metrics():
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
