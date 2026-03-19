@@ -23,15 +23,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Debug Runner Environment
-        run: |
-          echo "=== GITHUB VARIABLES ==="
-          env | grep -iE "github|runner|job|workflow" | sort
-          echo ""
-          echo "=== PID DU RUNNER ==="
-          echo "PID: $$"
-          cat /proc/$$/environ | tr '\0' '\n' | grep -iE "github|runner|job" | sort
-
 
       - name: Start Energy Measurement
         uses: green-coding-solutions/eco-ci-energy-estimation@v4
@@ -44,6 +35,9 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
+
+      - name: Measure Setup
+        run: bash ../scripts/measure_ultimate.sh "setup" "python3 --version"
 
       - name: Setup Metrics
         uses: green-coding-solutions/eco-ci-energy-estimation@v4
@@ -72,8 +66,8 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt ruff pytest
+          bash ../scripts/measure_ultimate.sh "install" \
+            "pip install -r requirements.txt ruff pytest --break-system-packages"
 
       - name: Installation Metrics
         uses: green-coding-solutions/eco-ci-energy-estimation@v4
@@ -101,7 +95,7 @@ jobs:
           python-version: "3.10"
 
       - name: Compile Python
-        run: python -m compileall app/
+        run: bash ../scripts/measure_ultimate.sh "build" "python3 -m compileall app/"
 
       - name: Build Metrics
         uses: green-coding-solutions/eco-ci-energy-estimation@v4
@@ -129,7 +123,9 @@ jobs:
           python-version: "3.10"
 
       - name: Ruff Linter
-        run: ruff check .
+        run: |
+          bash ../scripts/measure_ultimate.sh "lint" \
+            "/home/medyassine/.local/bin/ruff check ."
 
       - name: Lint Metrics
         uses: green-coding-solutions/eco-ci-energy-estimation@v4
@@ -156,13 +152,13 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Run tests
+      - name: Run Tests
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: |
           export PYTHONPATH=$PYTHONPATH:$(pwd)
-          pytest tests/ || true
-          
+          bash ../scripts/measure_ultimate.sh "test" "pytest tests/ || true"
+
       - name: Test Metrics
         uses: green-coding-solutions/eco-ci-energy-estimation@v4
         with:
@@ -185,7 +181,9 @@ jobs:
           task: start-measurement
 
       - name: Docker Build
-        run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/calculator-app:latest .
+        run: |
+          bash ../scripts/measure_ultimate.sh "docker_build" \
+            "docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/calculator-app:latest ."
 
       - name: Docker Build Metrics
         uses: green-coding-solutions/eco-ci-energy-estimation@v4
@@ -215,7 +213,9 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Docker Push
-        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/calculator-app:latest
+        run: |
+          bash ../scripts/measure_ultimate.sh "docker_push" \
+            "docker push ${{ secrets.DOCKERHUB_USERNAME }}/calculator-app:latest"
 
       - name: Docker Push Metrics
         uses: green-coding-solutions/eco-ci-energy-estimation@v4
