@@ -1,241 +1,104 @@
-name: Calculator Service CI/CD - Energy Optimized
-
-permissions:
-  contents: read
-  actions: read
+name: Calculator CI - Full Manual Testing
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
+    inputs:
+      target_job:
+        description: 'Sélectionnez le job à tester'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - setup
+          - install
+          - build
+          - lint
+          - test
+          - docker-build
+          - docker-push
 
 defaults:
   run:
     working-directory: ./chatbot
 
 jobs:
-
-# -----------------------
-# ENV SETUP
 # -----------------------
   setup:
+    if: github.event.inputs.target_job == 'setup' || github.event.inputs.target_job == 'all'
     runs-on: self-hosted
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Start Energy Measurement
-        uses: green-coding-solutions/eco-ci-energy-estimation@v4
-        with:
-          task: start-measurement
-          geo-location: fr
-          carbon-intensity: 0
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
+      - uses: actions/setup-python@v4
         with:
           python-version: "3.10"
+      - run: python3 --version
 
-      - name: Measure Setup
-        run: bash ../scripts/measure_ultimate.sh "setup" "python3 --version"
-
-      - name: Setup Metrics
-        uses: green-coding-solutions/eco-ci-energy-estimation@v4
-        with:
-          task: get-measurement
-          label: "Setup Environment"
-
-# -----------------------
-# INSTALL
 # -----------------------
   install:
+    if: github.event.inputs.target_job == 'install' || github.event.inputs.target_job == 'all'
     runs-on: self-hosted
-    needs: setup
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Start Measurement
-        uses: green-coding-solutions/eco-ci-energy-estimation@v4
-        with:
-          task: start-measurement
-
       - uses: actions/setup-python@v4
         with:
           python-version: "3.10"
-
       - name: Install Dependencies
-        run: |
-          bash ../scripts/measure_ultimate.sh "install" \
-            "pip install -r requirements.txt ruff pytest --break-system-packages"
+        run: pip install -r requirements.txt ruff pytest --break-system-packages
 
-      - name: Installation Metrics
-        uses: green-coding-solutions/eco-ci-energy-estimation@v4
-        with:
-          task: get-measurement
-          label: "Dependencies Installation"
-
-# -----------------------
-# BUILD
 # -----------------------
   build:
+    if: github.event.inputs.target_job == 'build' || github.event.inputs.target_job == 'all'
     runs-on: self-hosted
-    needs: install
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Start Measurement
-        uses: green-coding-solutions/eco-ci-energy-estimation@v4
-        with:
-          task: start-measurement
-
       - uses: actions/setup-python@v4
         with:
           python-version: "3.10"
+      - run: python3 -m compileall app/
 
-      - name: Compile Python
-        run: bash ../scripts/measure_ultimate.sh "build" "python3 -m compileall app/"
-
-      - name: Build Metrics
-        uses: green-coding-solutions/eco-ci-energy-estimation@v4
-        with:
-          task: get-measurement
-          label: "Compile Bytecode"
-
-# -----------------------
-# LINT
 # -----------------------
   lint:
+    if: github.event.inputs.target_job == 'lint' || github.event.inputs.target_job == 'all'
     runs-on: self-hosted
-    needs: build
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Start Measurement
-        uses: green-coding-solutions/eco-ci-energy-estimation@v4
-        with:
-          task: start-measurement
-
       - uses: actions/setup-python@v4
         with:
           python-version: "3.10"
+      - run: /home/medyassine/.local/bin/ruff check .
 
-      - name: Ruff Linter
-        run: |
-          bash ../scripts/measure_ultimate.sh "lint" \
-            "/home/medyassine/.local/bin/ruff check ."
-
-      - name: Lint Metrics
-        uses: green-coding-solutions/eco-ci-energy-estimation@v4
-        with:
-          task: get-measurement
-          label: "Ruff Linter"
-
-# -----------------------
-# TEST
 # -----------------------
   test:
+    if: github.event.inputs.target_job == 'test' || github.event.inputs.target_job == 'all'
     runs-on: self-hosted
-    needs: lint
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Start Measurement
-        uses: green-coding-solutions/eco-ci-energy-estimation@v4
-        with:
-          task: start-measurement
-
       - uses: actions/setup-python@v4
         with:
           python-version: "3.10"
-
-      - name: Run Tests
-        env:
+      - env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: |
           export PYTHONPATH=$PYTHONPATH:$(pwd)
-          bash ../scripts/measure_ultimate.sh "test" "pytest tests/ || true"
+          pytest tests/ || true
 
-      - name: Test Metrics
-        uses: green-coding-solutions/eco-ci-energy-estimation@v4
-        with:
-          task: get-measurement
-          label: "Pytest"
-
-# -----------------------
-# DOCKER BUILD
 # -----------------------
   docker-build:
+    if: github.event.inputs.target_job == 'docker-build' || github.event.inputs.target_job == 'all'
     runs-on: self-hosted
-    needs: test
-
     steps:
       - uses: actions/checkout@v4
+      - run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/calculator-app:latest .
 
-      - name: Start Measurement
-        uses: green-coding-solutions/eco-ci-energy-estimation@v4
-        with:
-          task: start-measurement
-
-      - name: Docker Build
-        run: |
-          bash ../scripts/measure_ultimate.sh "docker_build" \
-            "docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/calculator-app:latest ."
-
-      - name: Docker Build Metrics
-        uses: green-coding-solutions/eco-ci-energy-estimation@v4
-        with:
-          task: get-measurement
-          label: "Docker Build"
-
-# -----------------------
-# DOCKER PUSH
 # -----------------------
   docker-push:
+    if: github.event.inputs.target_job == 'docker-push' || github.event.inputs.target_job == 'all'
     runs-on: self-hosted
-    needs: docker-build
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Start Measurement
-        uses: green-coding-solutions/eco-ci-energy-estimation@v4
-        with:
-          task: start-measurement
-
-      - name: Docker Login
-        uses: docker/login-action@v3
+      - uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Docker Push
-        run: |
-          bash ../scripts/measure_ultimate.sh "docker_push" \
-            "docker push ${{ secrets.DOCKERHUB_USERNAME }}/calculator-app:latest"
-
-      - name: Docker Push Metrics
-        uses: green-coding-solutions/eco-ci-energy-estimation@v4
-        with:
-          task: get-measurement
-          label: "Docker Push"
-
-# -----------------------
-# FINAL REPORT
-# -----------------------
-  energy-report:
-    runs-on: self-hosted
-    needs: docker-push
-
-    steps:
-      - name: Display Results
-        uses: green-coding-solutions/eco-ci-energy-estimation@v4
-        with:
-          task: display-results
-          send-data: true
-          branch: main
-          json-output: true
-          calculate-co2: false
+      - run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/calculator-app:latest
