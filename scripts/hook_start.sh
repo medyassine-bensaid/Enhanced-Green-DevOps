@@ -1,47 +1,69 @@
 #!/bin/bash
 # ==============================================================================
-# hook_start.sh — Lancé automatiquement par le Runner au début de chaque job
+# hook_start.sh — Initialisation, Diagnostics et Lancement des Capteurs
 # ==============================================================================
 
+# Redirection des logs pour le debug
 exec >> /tmp/runner_hooks.log 2>&1
-echo "🚀 [START] Job: $GITHUB_JOB | Run: $GITHUB_RUN_ID"
-echo "---------------------------------------------------"
 
-# Récupérer le nom du repo
-REPO_NAME=$(echo "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]' | tr '/' '_')
-
-# le chemin de stockage avec le repo
-METRICS_DIR="/home/medyassine/GreenDevOps/jobs_energy/$REPO_NAME"
-mkdir -p "$METRICS_DIR"
-sudo modprobe msr 2>/dev/null
-
-# Variables fournies par GitHub Runner
+# --- 1. Variables Dynamiques ---
+REPO_NAME=$(echo "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]' | tr '/' '_' | tr '-' '_')
 JOB_NAME=$(echo "$GITHUB_JOB" | tr '[:upper:]' '[:lower:]' | tr ' ' '_')
-RUN_ID="$GITHUB_RUN_ID"
+PIPELINE_ID="$GITHUB_RUN_ID"
 
-# 1. Sauvegarder le timestamp de début
-echo $(date +%s) > "/tmp/ecofloc_${RUN_ID}_${JOB_NAME}_start.ts"
+echo "========================================================================"
+echo "🚀 [START] INITIALISATION DU JOB: $GITHUB_JOB"
+echo "📅 Date: $(date '+%Y-%m-%d %H:%M:%S')"
+echo "🆔 Pipeline ID: $PIPELINE_ID | Repo: $REPO_NAME"
+echo "========================================================================"
 
-# 2. Lancer les sondes EcoFloc en arrière-plan
-# On cible le nom du processus "Runner.Worker" pour tout capturer
-PID_FILE="/tmp/ecofloc_${RUN_ID}_${JOB_NAME}.pids"
+# --- 2. Arborescence de Stockage ---
+
+BASE_DIR="/home/medyassine/GreenDevOps/jobs_energy/$REPO_NAME"
+RAW_DIR="$BASE_DIR/raw_samples"
+mkdir -p "$RAW_DIR"
+
+# --- 3. Diagnostics Système ---
+echo "🔍 Vérification du système..."
+# MSR est nécessaire pour la lecture CPU via Intel RAPL
+if lsmod | grep -q "msr"; then
+    echo "  [OK] Module MSR déjà chargé."
+else
+    sudo modprobe msr 2>/dev/null && echo "  [OK] Module MSR chargé avec succès." || echo "  [!!] Erreur: Impossible de charger MSR."
+fi
+
+# --- 4. Timer et Fichiers de Tracking ---
+TS_FILE="/tmp/ecofloc_${PIPELINE_ID}_${JOB_NAME}_start.ts"
+echo $(date +%s) > "$TS_FILE"
+echo "⏱️  Timestamp de début enregistré."
+
+# --- 5. Lancement des Sondes EcoFloc ---
+PID_FILE="/tmp/ecofloc_${PIPELINE_ID}_${JOB_NAME}.pids"
 > "$PID_FILE"
+echo "📡 Activation des capteurs (Intervalle: 1000ms)..."
 
 for conf in cpu ram sd nic gpu; do
-    # -i 1000ms, -t 3600s de timeout de sécurité
-    sudo ecofloc --$conf -n "Runner.Worker" -i 1000 -t 3600 -f "$METRICS_DIR/" > /dev/null 2>&1 &
+    # On cible Runner.Worker (le processus qui exécute tes scripts python/docker/lint)
+    sudo ecofloc --$conf -n "Runner.Worker" -i 1000 -t 3600 -f "$RAW_DIR/" > /dev/null 2>&1 &
     echo $! >> "$PID_FILE"
+    echo "  [+] Sonde $conf active (PID: $!)"
 done
 
-# On lance un sous-interpréteur en arrière-plan qui attend que les steps commencent
+# --- 6. Snapshot Visuel (Arrière-plan) ---
 (
-  sleep 5 # On attend 5s pour que le premier step (souvent checkout) soit lancé
+  sleep 6 # On attend que le job commence ses steps
+  echo ""
   echo "---------------------------------------------------"
-  echo "📸 [SNAPSHOT] Arborescence des processus pour $GITHUB_JOB"
-  # -a : affiche les arguments (ex: pytest)
-  # -p : affiche les PIDs
-  pstree -ap $(pgrep -f "Runner.Worker") 2>/dev/null
+  echo "📸 [SNAPSHOT] Processus cibles pour $JOB_NAME :"
+  WORKER_PID=$(pgrep -f "Runner.Worker")
+  if [ -n "$WORKER_PID" ]; then
+      pstree -ap "$WORKER_PID" 2>/dev/null
+  else
+      echo "  [!] Attention: Runner.Worker non détecté. Vérifiez vos permissions."
+  fi
   echo "---------------------------------------------------"
+  echo ""
 ) & 
 
+echo "✅ [SUCCESS] Setup terminé. Prêt pour l'exécution."
 exit 0
