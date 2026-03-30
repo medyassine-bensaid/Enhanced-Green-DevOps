@@ -17,7 +17,7 @@ defaults:
 
 jobs:
   burn-test:
-    if: github.event.inputs.target_job == 'integration-test' || github.event.inputs.target_job == 'all'
+    if: github.event.inputs.target_job == 'burn-test' || github.event.inputs.target_job == 'all'
     runs-on: self-hosted
     steps:
       - name: Set up Docker Buildx
