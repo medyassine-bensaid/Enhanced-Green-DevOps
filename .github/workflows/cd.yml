@@ -9,15 +9,15 @@ on:
         type: choice
         options:
           - all
-          - burn-test
+          - burnout
 
 defaults:
   run:
     working-directory: ./chatbot
 
 jobs:
-  burn-test:
-    if: github.event.inputs.target_job == 'burn-test' || github.event.inputs.target_job == 'all'
+  burnout:
+    if: github.event.inputs.target_job == 'burnout' || github.event.inputs.target_job == 'all'
     runs-on: self-hosted
     steps:
       - name: Set up Docker Buildx
