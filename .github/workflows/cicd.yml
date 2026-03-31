@@ -103,14 +103,31 @@ jobs:
           path: chatbot/dist/chatbot-artifact.tar.gz
           retention-days: 1
 
-# 7. DOCKER-BUILD - Création de l'image
+# 7. DOCKER-BUILD - Création de l'image avec Buildx
   docker-build:
     needs: [build-artifact]
     if: always() && (github.event.inputs.target_job == 'docker-build' || github.event.inputs.target_job == 'all')
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v4
-      - run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/devops-bot:latest .
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          # On force le driver docker-container pour garantir que Buildkit 
+          # tourne dans un conteneur isolable par ton Watcher
+          driver: docker-container
+
+      - name: Build and Load
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          load: true # Charge l'image localement sur ton Latitude pour le push suivant
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/devops-bot:latest
+          # On utilise le cache interne de Buildx pour plus de rapidité
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
 # 8. DOCKER-PUSH - Envoi
   docker-push:
@@ -118,16 +135,26 @@ jobs:
     if: always() && (github.event.inputs.target_job == 'docker-push' || github.event.inputs.target_job == 'all')
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v4
-      - uses: docker/login-action@v3
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/devops-bot:latest
 
+      - name: Build and Push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/devops-bot:latest
 
+# 9. INTEGRATION-TEST - Validation dynamique
   integration-test:
-    if: github.event.inputs.target_job == 'integration-test' || github.event.inputs.target_job == 'all'
+    needs: [docker-build]
+    if: always() && (github.event.inputs.target_job == 'integration-test' || github.event.inputs.target_job == 'all')
     runs-on: self-hosted
     steps:
       - name: Checkout Code
@@ -135,35 +162,29 @@ jobs:
 
       - name: Run Integration Test
         env:
-          # Mise à jour avec le nom d'image utilisé dans ton CI : devops-bot
           IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/devops-bot:latest
           CONTAINER_NAME: devops-bot-test-${{ github.run_id }}
         run: |
           set -Eeuo pipefail
           
-          # 1. Port aléatoire pour éviter les collisions sur ton Latitude-5490
+          # Port aléatoire pour ton Latitude-5490
           PORT=$(shuf -i 20000-65000 -n 1)
           echo "Démarrage du conteneur $CONTAINER_NAME sur le port $PORT"
           
-          # 2. Nettoyage préventif
           docker rm -f $CONTAINER_NAME >/dev/null 2>&1 || true
           
-          # 3. Lancement du conteneur
+          # Le Watcher va capturer cet événement 'start' instantanément !
           docker run -d \
             --name $CONTAINER_NAME \
             -p $PORT:8000 \
             $IMAGE
           
-          # 4. Temps d'attente pour stabilisation
           sleep 10
           
-          # 5. Vérification de l'état
           if [ "$(docker inspect -f '{{.State.Running}}' $CONTAINER_NAME)" == "true" ]; then
-             echo "Le Chatbot est opérationnel sur le port $PORT"
-             
-             # curl http://localhost:$PORT/health || exit 1
+             echo "✅ Le Chatbot est opérationnel sur le port $PORT"
           else
-             echo "Échec du démarrage du conteneur"
+             echo "❌ Échec du démarrage du conteneur"
              docker logs $CONTAINER_NAME
              exit 1
           fi
@@ -174,4 +195,3 @@ jobs:
           CONTAINER_NAME="devops-bot-test-${{ github.run_id }}"
           echo "🧹 Nettoyage du conteneur $CONTAINER_NAME"
           docker rm -f $CONTAINER_NAME >/dev/null 2>&1 || true
-
