@@ -122,7 +122,7 @@ jobs:
       - name: Build and Load
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: ./Dockerfile
           load: true # Charge l'image localement sur ton Latitude pour le push suivant
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/devops-bot:latest
           # On utilise le cache interne de Buildx pour plus de rapidité
@@ -147,7 +147,7 @@ jobs:
       - name: Build and Push
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: ./Dockerfile
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/devops-bot:latest
 
