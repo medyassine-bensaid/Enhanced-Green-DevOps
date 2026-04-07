@@ -127,7 +127,7 @@ jobs:
 
 # 9. INTEGRATION-TEST - Validation dynamique
   integration-test:
-    needs: [docker-build,docker-push]
+    needs: [docker-push]
     if: always() && (github.event.inputs.target_job == 'integration-test' || github.event.inputs.target_job == 'all')
     runs-on: self-hosted
     steps:
