@@ -28,6 +28,18 @@ mkdir -p "$JOB_METRICS_DIR" "$ML_DIR" "$PIPELINE_DIR"
 PID_FILE="/tmp/ecofloc_${PIPELINE_ID}_${JOB_NAME}.pids"
 START_TS_FILE="/tmp/ecofloc_${PIPELINE_ID}_${JOB_NAME}_start.ts"
 CONTAINER_PID_FILE="/tmp/ecofloc_${PIPELINE_ID}_${JOB_NAME}.cid"
+# --- Temporels  ---
+TS_LABEL=$(date +%Y-%m-%d_%H:%M:%S)
+END_TS=$(date +%s)
+
+if [ -f "$START_TS_FILE" ]; then
+    START_TS=$(cat "$START_TS_FILE")
+    # Calcul de la durée réelle en secondes
+    DURATION=$((END_TS - START_TS))
+else
+    # Sécurité si le fichier start n'existe pas
+    DURATION=0
+fi
 # --- 3. Fonctions de Calcul ---
 fadd() { echo "scale=6; ${1:-0} + ${2:-0}" | bc 2>/dev/null || echo "0"; }
 
@@ -47,7 +59,7 @@ parse_ecofloc() {
         total_n=$((total_n + r_n))
     fi
 
-    # 2. Récupérer le fichier de DOCKER (Nouvelle méthode : COMM_dockerd)
+    # 2. Récupérer le fichier de DOCKER 
     # EcoFloc génère ce nom via l'option -n "dockerd"
     local docker_csv=$(sudo ls "${RAW_DIR}/ECOFLOC_${mod}_COMM_dockerd"*.csv 2>/dev/null | head -1)
     
@@ -126,7 +138,6 @@ if [ -f "$PID_FILE" ]; then
     # Créer le fichier avec header s'il n'existe pas
     [ ! -f "$PIPE_FILE" ] && echo "$PIPE_HEADER" > "$PIPE_FILE"
 
-    # LOGIQUE D'UPDATE :
     # Si le pipeline_id existe déjà, on remplace la ligne. Sinon, on l'ajoute.
     LINE_DATA="$TS_LABEL,$PIPELINE_ID,$COMMIT_ID,$REPO_NAME,$P_NAME,$P_CAT,$BRANCH_NAME,$TRIGGER,$NEW_SUM"
 
@@ -136,7 +147,6 @@ if [ -f "$PID_FILE" ]; then
     fi
 
     # 2. On crée un fichier temporaire qui contient TOUT sauf la ligne de ce pipeline
-    # On utilise -w pour chercher l'ID exact (évite de confondre l'ID 123 avec 1234)
     grep -v -w "$PIPELINE_ID" "$PIPE_FILE" > "${PIPE_FILE}.tmp"
 
     # 3. On ajoute la ligne avec la valeur d'énergie mise à jour
@@ -148,8 +158,7 @@ if [ -f "$PID_FILE" ]; then
     echo "✅ [SUCCESS] Pipeline $PIPELINE_ID mis à jour : $NEW_SUM J"
 
     echo "🏁 [STOP] Job $JOB_NAME terminé. Total Pipeline ($PIPELINE_ID) mis à jour : $NEW_SUM J"
-    # On ajoute une ligne à chaque job : la dernière ligne pour un pipeline_id sera son total final
-    #echo "$TS_LABEL,$PIPELINE_ID,$COMMIT_ID,$REPO_NAME,$P_NAME,$P_CAT,$BRANCH_NAME,$TRIGGER,$NEW_SUM" >> "$PIPE_FILE"
+
 
     echo "🏁 [STOP] Job $JOB_NAME : $JOB_TOTAL_J J | Total Pipeline provisoire : $NEW_SUM J"
 

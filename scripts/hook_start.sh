@@ -1,7 +1,6 @@
 #!/bin/bash
 # ==============================================================================
 # hook_start.sh — STRATÉGIE DE MESURE HYBRIDE (RUNNER + CGROUP DOCKER)
-# Version : FINALE - Optimisée pour Latitude 5490 (Anti-0J)
 # ==============================================================================
 set +e
 exec >> /tmp/runner_hooks.log 2>&1
@@ -43,7 +42,7 @@ echo $(date +%s) > "$TS_FILE"
 > "$PID_FILE"
 echo "⏱️  Timestamp enregistré dans $TS_FILE"
 
-# --- 5. Phase 1 : Lancement Sonde Runner (Obligatoire) ---
+# --- 5. Phase 1 : Lancement Sonde Runner ---
 echo "📡 [PHASE 1] Activation des sondes sur le Runner (-n Runner.Worker)..."
 for conf in cpu ram sd nic gpu; do
    nohup sudo ecofloc --$conf -n "Runner.Worker" -i 1000 -t 3600 -f "$RAW_DIR/" > /dev/null 2>&1 &
@@ -51,8 +50,8 @@ for conf in cpu ram sd nic gpu; do
     echo "  [+] Sonde $conf (Runner) lancée (PID EcoFloc: $!)"
 done
 
-## --- 6. Phase 2 : Détection Docker (Stratégie Unifiée dockerd) ---
-CD_PATTERN="docker|push|deploy|publish|integration|container|burnout|docker-build|k8s"
+## --- 6. Phase 2 : Détection Docker (Stratégie dockerd) ---
+CD_PATTERN="docker|push|deploy|publish|integration|container|docker-build|k8s|kubernetes|containerd"
 
 if [[ "$JOB_NAME" =~ $CD_PATTERN ]]; then
     echo "🏗️ [ANALYSE] Job Docker détecté ($JOB_NAME)."
