@@ -106,6 +106,7 @@ jobs:
  # 7. DOCKER-BUILD simplifié pour ton Runner local
   docker-build:
     runs-on: self-hosted
+    needs: [build-artifact]
     steps:
       - uses: actions/checkout@v4
       - name: Build Local Image
