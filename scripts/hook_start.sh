@@ -4,11 +4,16 @@
 # ==============================================================================
 set +e
 exec >> /tmp/runner_hooks.log 2>&1
+# Nettoyage préventif des vieux fichiers de plus de 1 jour pour éviter l'encombrement
+find /tmp -name "ecofloc_*" -mtime +1 -delete
+find /tmp -name "pipeline_*_sum.tmp" -mtime +1 -delete
 
 # --- 1. Variables Dynamiques & Contextuelles ---
 REPO_NAME=$(echo "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]' | tr '/' '_' | tr '-' '_')
 JOB_NAME=$(echo "$GITHUB_JOB" | tr '[:upper:]' '[:lower:]' | tr ' ' '_')
 PIPELINE_ID="$GITHUB_RUN_ID"
+echo "$PROJECT_NAME" > /tmp/ecofloc_pname.tmp
+echo "$PROJECT_CATEGORY" > /tmp/ecofloc_pcat.tmp
 
 echo "========================================================================"
 echo "🚀 [START] INITIALISATION DU JOB : $GITHUB_JOB"
@@ -51,7 +56,7 @@ for conf in cpu ram sd nic gpu; do
 done
 
 ## --- 6. Phase 2 : Détection Docker (Stratégie dockerd) ---
-CD_PATTERN="docker|push|deploy|publish|integration|container|docker-build|k8s|kubernetes|containerd"
+CD_PATTERN="docker|push|deploy|publish|production|prod|integration|container|docker-build|k8s|kubernetes|containerd"
 
 if [[ "$JOB_NAME" =~ $CD_PATTERN ]]; then
     echo "🏗️ [ANALYSE] Job Docker détecté ($JOB_NAME)."

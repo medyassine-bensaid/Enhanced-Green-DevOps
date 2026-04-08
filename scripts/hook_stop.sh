@@ -5,6 +5,7 @@
 set +e
 exec >> /tmp/runner_hooks.log 2>&1
 
+
 # --- 1. Contexte ---
 REPO_NAME=$(echo "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]' | tr '/' '_' | tr '-' '_')
 COMMIT_ID="${GITHUB_SHA:0:7}"
@@ -13,8 +14,8 @@ PIPELINE_ID="$GITHUB_RUN_ID"
 JOB_NAME=$(echo "$GITHUB_JOB" | tr ' ' '_')
 
 # Variables YAML
-P_CAT="${PROJECT_CATEGORY:-IA}"
-P_NAME="${PROJECT_NAME:-Chatbot-LLM}"
+P_NAME=$(cat /tmp/ecofloc_pname.tmp 2>/dev/null || echo "Chatbot-LLM")
+P_CAT=$(cat /tmp/ecofloc_pcat.tmp 2>/dev/null || echo "IA")
 [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && TRIGGER="manual" || TRIGGER="auto"
 
 # --- 2. Chemins ---
