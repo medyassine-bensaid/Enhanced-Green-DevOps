@@ -1,12 +1,12 @@
 #!/bin/bash
 # ==============================================================================
-# hook_start.sh — STRATÉGIE DE MESURE HYBRIDE (RUNNER + CGROUP DOCKER)
+# hook_start.sh — STRATÉGIE DE MESURE HYBRIDE (RUNNER + DOCKER)
 # ==============================================================================
 set +e
 exec >> /tmp/runner_hooks.log 2>&1
 # Nettoyage préventif des vieux fichiers de plus de 1 jour pour éviter l'encombrement
-find /tmp -name "ecofloc_*" -mtime +1 -delete
-find /tmp -name "pipeline_*_sum.tmp" -mtime +1 -delete
+find /tmp -name "ecofloc_*" -mtime +1 -delete 2>/dev/null
+find /tmp -name "pipeline_*_sum.tmp" -mtime +1 -delete 2>/dev/null
 
 # --- 1. Variables Dynamiques & Contextuelles ---
 REPO_NAME=$(echo "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]' | tr '/' '_' | tr '-' '_')
@@ -50,7 +50,7 @@ echo "⏱️  Timestamp enregistré dans $TS_FILE"
 # --- 5. Phase 1 : Lancement Sonde Runner ---
 echo "📡 [PHASE 1] Activation des sondes sur le Runner (-n Runner.Worker)..."
 for conf in cpu ram sd nic gpu; do
-   nohup sudo ecofloc --$conf -n "Runner.Worker" -i 1000 -t 3600 -f "$RAW_DIR/" > /dev/null 2>&1 &
+   nohup sudo ecofloc --$conf -n "Runner.Worker" -i 100 -t 3600 -f "$RAW_DIR/" > /dev/null 2>&1 &
     echo $! >> "$PID_FILE"
     echo "  [+] Sonde $conf (Runner) lancée (PID EcoFloc: $!)"
 done
