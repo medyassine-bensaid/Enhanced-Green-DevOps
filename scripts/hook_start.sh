@@ -28,7 +28,7 @@ mkdir -p "$RAW_DIR"
 echo "📂 Dossier de sortie : $RAW_DIR"
 
 # --- 3. Purge & Diagnostics ---
-sudo pkill -f "ecofloc" > /dev/null 2>&1 || true
+sudo pkill -x "ecofloc" > /dev/null 2>&1 || true
 sudo rm -f "$RAW_DIR"/*.csv > /dev/null 2>&1 || true
 
 echo "🔍 [DIAGNOSTIC] Vérification des prérequis système..."
