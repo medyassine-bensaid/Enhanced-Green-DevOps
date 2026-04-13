@@ -1,0 +1,21 @@
+resources:
+  - ../../base
+
+# On force le type NodePort uniquement pour Minikube
+patches:
+  - patch: |-
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: devops-bot-service
+      spec:
+        type: NodePort
+    target:
+      kind: Service
+      name: devops-bot-service
+
+# Gestion dynamique de l'image
+images:
+  - name: devops-bot-image
+    newName: medyassinebensaid/devops-bot
+    newTag: latest

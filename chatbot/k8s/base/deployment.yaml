@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devops-bot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: devops-bot
+  template:
+    metadata:
+      labels:
+        app: devops-bot
+    spec:
+      containers:
+      - name: bot-container
+        image: devops-bot-image
+        ports:
+        - containerPort: 8000
+        env:
+        - name: GROQ_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: bot-secrets
+              key: GROQ_API_KEY
+        - name: LANGTRACE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: bot-secrets
+              key: LANGTRACE_API_KEY
