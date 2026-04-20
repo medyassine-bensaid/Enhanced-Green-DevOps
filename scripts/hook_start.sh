@@ -46,33 +46,42 @@ CONTAINER_PID_FILE="/tmp/ecofloc_${PIPELINE_ID}_${JOB_NAME}.cid"
 echo $(date +%s) > "$TS_FILE"
 > "$PID_FILE"
 echo "⏱️  Timestamp enregistré dans $TS_FILE"
-
-# --- 5. Phase 1 : Lancement Sonde Runner ---
-echo "📡 [PHASE 1] Activation des sondes sur le Runner (-n Runner.Worker)..."
-for conf in cpu ram sd nic gpu; do
-   nohup sudo ecofloc --$conf -n "Runner.Worker" -i 100 -t 3600 -f "$RAW_DIR/" > /dev/null 2>&1 &
-    echo $! >> "$PID_FILE"
-    echo "  [+] Sonde $conf (Runner) lancée (PID EcoFloc: $!)"
-done
-
-## --- 6. Phase 2 : Détection Docker (Stratégie dockerd) ---
+# --- 5. Lancement des Sondes (Stratégie Dynamique Unifiée) ---
+declare -a TARGETS=("Runner.Worker")
 CD_PATTERN="docker|push|deploy|publish|production|prod|integration|container|docker-build|k8s|kubernetes|containerd"
 
+# Détection de l'infrastructure
 if [[ "$JOB_NAME" =~ $CD_PATTERN ]]; then
-    echo "🏗️ [ANALYSE] Job Docker détecté ($JOB_NAME)."
-    echo "📡 Lancement de la surveillance globale via le démon dockerd..."
-
-    # On marque la cible pour le script de stop
-    echo "dockerd" > "$CONTAINER_PID_FILE"
-
-    for conf in cpu ram sd nic gpu; do
-        # On cible le nom du processus (-n). EcoFloc suivra dockerd et ses enfants.
-        nohup sudo ecofloc --$conf -n "dockerd" -i 1000 -t 3600 -f "$RAW_DIR/" > /dev/null 2>&1 &
-        echo $! >> "$PID_FILE"
+    echo "🔍 [DEBUG] Analyse d'infrastructure..."
+    # On surveille les démons lourds : Docker, le coeur de Minikube et l'exécuteur de conteneurs
+    for cmd in dockerd containerd; do
+        # -f pour trouver les processus même si le nom est un chemin complet
+        PID=$(pgrep -f "$cmd" | head -n 1)
+        if [ -n "$PID" ]; then
+            TARGETS+=("$cmd")
+            echo "  -> [FOUND] $cmd actif (PID: $PID). Ajouté à l'audit."
+        fi
     done
-
-    echo "✅ [SUCCESS] Sondes dockerd actives. Mesure hybride Runner + Docker prête."
 fi
+
+echo "📡 [MONITOR] Activation des sondes (Interval: 500ms)..."
+for target in "${TARGETS[@]}"; do
+    echo "   [+] Target: $target"
+    for conf in cpu ram sd nic gpu; do
+        # On utilise 500ms pour équilibrer précision et charge CPU sur le Latitude
+        sudo nohup ecofloc --$conf -n "$target" -i 500 -t 3600 -f "$RAW_DIR/" > /dev/null 2>&1 &
+        E_PID=$!
+        
+        # Vérification de survie immédiate
+        sleep 0.1
+        if ps -p $E_PID > /dev/null; then
+            echo $E_PID >> "$PID_FILE"
+            echo "      - $conf : OK (PID: $E_PID)"
+        else
+            echo "      - $conf : ❌ ÉCHEC"
+        fi
+    done
+done
 # --- 7. Snapshot Visuel & Audit ---
 (
   sleep 6
