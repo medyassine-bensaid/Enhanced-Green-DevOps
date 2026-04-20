@@ -195,7 +195,7 @@ jobs:
       - name: Deploy with Kustomize
         run: |
           # On applique l'overlay minikube directement
-          kubectl apply -k devops-ai-agent/k8s/overlays/minikube
+          kubectl apply -k k8s/overlays/minikube
           
           # Force le pull de la nouvelle image même si le tag est 'latest'
           kubectl rollout restart deployment/devops-bot
