@@ -203,7 +203,7 @@ jobs:
           kubectl rollout restart deployment/devops-bot
           
           # Attente de la validation
-          kubectl rollout status deployment/devops-bot --timeout=90s
+          kubectl rollout status deployment/devops-bot --timeout=300s
 
       - name: Access URL
         run: |
