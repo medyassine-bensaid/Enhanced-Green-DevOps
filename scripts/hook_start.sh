@@ -28,7 +28,15 @@ mkdir -p "$RAW_DIR"
 echo "📂 Dossier de sortie : $RAW_DIR"
 
 # --- 3. Purge & Diagnostics ---
-sudo pkill -x "ecofloc" > /dev/null 2>&1 || true
+sudo pkill -f "ecofloc --cpu" 2>/dev/null || true
+sudo pkill -f "ecofloc --ram" 2>/dev/null || true
+sudo pkill -f "ecofloc --sd"  2>/dev/null || true
+sudo pkill -f "ecofloc --nic" 2>/dev/null || true
+sudo pkill -f "ecofloc --gpu" 2>/dev/null || true
+sudo pkill -f "nethogs wlp2s0" 2>/dev/null || true
+sleep 1
+
+#------
 sudo rm -f "$RAW_DIR"/*.csv > /dev/null 2>&1 || true
 
 echo "🔍 [DIAGNOSTIC] Vérification des prérequis système..."
@@ -47,6 +55,9 @@ echo $(date +%s) > "$TS_FILE"
 > "$PID_FILE"
 echo "⏱️  Timestamp enregistré dans $TS_FILE"
 # --- 5. Lancement des Sondes (Stratégie Dynamique Unifiée) ---
+
+sleep 2
+
 declare -a TARGETS=("Runner.Worker")
 CD_PATTERN="docker|push|deploy|publish|production|prod|integration|container|docker-build|k8s|kubernetes|containerd"
 

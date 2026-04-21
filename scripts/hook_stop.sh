@@ -61,7 +61,9 @@ parse_audit() {
 if [ -f "$PID_FILE" ]; then
     echo "🛑 Arrêt des sondes EcoFloc..."
     while read pid; do sudo kill -2 "$pid" 2>/dev/null; done < "$PID_FILE"
-    sleep 3 
+    sleep 3
+    sudo pkill -f "nethogs wlp2s0" 2>/dev/null || true
+    sudo pkill -f "ecofloc --nic" 2>/dev/null || true
 
     echo "======================================================="
     echo "📊 RAPPORT ÉNERGÉTIQUE DÉTAILLÉ (COMPOSANTS)"
@@ -135,4 +137,10 @@ if [ -f "$PID_FILE" ]; then
 
     # Nettoyage
     sudo rm -f "$PID_FILE" "$START_TS_FILE" "/tmp/ecofloc_${PIPELINE_ID}_${JOB_NAME}.cid" "${RAW_DIR}/ECOFLOC_"*.csv
+    sudo pkill -f "ecofloc --cpu" 2>/dev/null || true
+    sudo pkill -f "ecofloc --ram" 2>/dev/null || true
+    sudo pkill -f "ecofloc --sd"  2>/dev/null || true
+    sudo pkill -f "ecofloc --nic" 2>/dev/null || true
+    sudo pkill -f "ecofloc --gpu" 2>/dev/null || true
+    sudo pkill -f "nethogs wlp2s0" 2>/dev/null || true
 fi
