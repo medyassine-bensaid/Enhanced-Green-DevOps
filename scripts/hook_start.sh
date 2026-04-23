@@ -12,8 +12,15 @@ find /tmp -name "pipeline_*_sum.tmp" -mtime +1 -delete 2>/dev/null
 REPO_NAME=$(echo "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]' | tr '/' '_' | tr '-' '_')
 JOB_NAME=$(echo "$GITHUB_JOB" | tr '[:upper:]' '[:lower:]' | tr ' ' '_')
 PIPELINE_ID="$GITHUB_RUN_ID"
-echo "$PROJECT_NAME" > /tmp/ecofloc_pname.tmp
-echo "$PROJECT_CATEGORY" > /tmp/ecofloc_pcat.tmp
+
+export P_NAME="${PROJECT_NAME:-Chatbot-LLM}"
+export P_CAT="${PROJECT_CATEGORY:-IA}"
+
+# Sauvegarde forcée pour hook_stop.sh
+echo "$P_NAME" > /tmp/ecofloc_pname.tmp
+echo "$P_CAT" > /tmp/ecofloc_pcat.tmp
+
+echo "🚀 [START] Projet: $P_NAME | Catégorie: $P_CAT"
 
 echo "========================================================================"
 echo "🚀 [START] INITIALISATION DU JOB : $GITHUB_JOB"

@@ -12,8 +12,19 @@ BRANCH_NAME="$GITHUB_REF_NAME"
 PIPELINE_ID="$GITHUB_RUN_ID"
 JOB_NAME=$(echo "$GITHUB_JOB" | tr ' ' '_')
 
-P_NAME=$(cat /tmp/ecofloc_pname.tmp 2>/dev/null || echo "Chatbot-LLM")
-P_CAT=$(cat /tmp/ecofloc_pcat.tmp 2>/dev/null || echo "IA")
+# Lecture robuste avec fallback (valeur par défaut)
+if [ -f /tmp/ecofloc_pname.tmp ]; then
+    P_NAME=$(cat /tmp/ecofloc_pname.tmp)
+else
+    P_NAME="Chatbot-LLM"
+fi
+
+if [ -f /tmp/ecofloc_pcat.tmp ]; then
+    P_CAT=$(cat /tmp/ecofloc_pcat.tmp)
+else
+    P_CAT="IA"
+fi
+
 [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && TRIGGER="manual" || TRIGGER="auto"
 
 # --- 2. Chemins ---
